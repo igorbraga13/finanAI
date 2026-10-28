@@ -1,0 +1,57 @@
+﻿/* FinanAI - Estilos Customizados */
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars customizadas */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.7);
+}
+
+/* Efeitos de tabs */
+.tab-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tab-btn.active {
+    box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.2);
+}
+
+/* Gauge do Score de Saúde */
+.gauge-circle-bg {
+    stroke: #334155;
+    fill: none;
+}
+.gauge-circle-progress {
+    fill: none;
+    transition: stroke-dashoffset 1s ease-in-out, stroke 0.5s ease;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+/* Transições suaves */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,1364 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanAI - Gestão Financeira Inteligente & Investimentos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        },
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                        cardborder: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js DataLabels Plugin CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (window['pdfjs-dist/build/pdf']) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+    <!-- Tesseract.js CDN (OCR para imagens) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Top Navigation Bar Principal -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 p-2 rounded-xl text-emerald-400 border border-emerald-500/30 shadow-lg">
+                    <i data-lucide="wallet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">FinanAI</h1>
+                    <p class="text-xs text-slate-400">Investimentos & Gestão Financeira BRL / USD</p>
+                </div>
+            </div>
+
+            <!-- Controles Globais do Topo -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Seletor de Mês de Referência -->
+                <div class="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700 text-xs shadow-inner">
+                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="text-slate-400 hidden sm:inline">Mês Ref:</span>
+                    <select id="selectedMonthSelect" onchange="App.onSelectedMonthChange(this.value)" class="bg-slate-900 text-slate-200 text-xs font-semibold rounded px-2 py-1 border border-slate-700 focus:outline-none focus:border-emerald-500">
+                        <!-- Populado dinamicamente -->
+                    </select>
+                </div>
+
+                <!-- Seletor Moeda BRL/USD -->
+                <div class="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 text-xs font-semibold">
+                    <button id="currencyBrlBtn" onclick="App.setDisplayCurrency('BRL')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white transition flex items-center gap-1 font-bold">
+                        <span>R$</span> BRL
+                    </button>
+                    <button id="currencyUsdBtn" onclick="App.setDisplayCurrency('USD')" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-normal">
+                        <span>$</span> USD
+                    </button>
+                </div>
+
+                <!-- Botão Teto de Gastos -->
+                <button onclick="Utils.toggleModal('budgetModal')" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1.5 font-medium">
+                    <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="hidden sm:inline">Teto de Gastos</span>
+                </button>
+
+                <!-- Botão Configurações -->
+                <button onclick="Utils.toggleModal('configModal')" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition relative" title="Configurações e Chave de API">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    <span id="apiKeyBadge" class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Barra de Navegação das 3 Abas -->
+        <div class="border-t border-slate-800/80 bg-slate-900/60 backdrop-blur">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 sm:gap-4 overflow-x-auto py-2 custom-scrollbar">
+                <!-- Aba 1: Despesas -->
+                <button id="tab-btn-expenses" onclick="App.switchTab('expenses')" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-transparent transition cursor-pointer">
+                    <i data-lucide="receipt" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Despesas</span>
+                    <span id="navExpenseBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">R$ 0,00</span>
+                </button>
+
+                <!-- Aba 2: Receitas -->
+                <button id="tab-btn-incomes" onclick="App.switchTab('incomes')" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-transparent transition cursor-pointer">
+                    <i data-lucide="trending-up" class="w-4 h-4 text-cyan-400"></i>
+                    <span>Receitas & Proventos</span>
+                    <span id="navIncomeBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">R$ 0,00</span>
+                </button>
+
+                <!-- Aba 3: Saúde Financeira -->
+                <button id="tab-btn-health" onclick="App.switchTab('health')" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-transparent transition cursor-pointer">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-purple-400"></i>
+                    <span>Saúde Financeira</span>
+                    <span id="navHealthBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-bold">Score 100</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Banner de Alerta de API Key -->
+        <div id="apiKeyNotice" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-300">
+            <div class="flex items-center gap-3">
+                <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 text-amber-400"></i>
+                <p class="text-sm">Importe arquivos <strong>.JSON</strong> diretamente ou configure <strong>Gemini ou OpenAI (ChatGPT)</strong> para leitura de PDFs, imagens e diagnósticos.</p>
+            </div>
+            <button onclick="Utils.toggleModal('configModal')" class="px-3 py-1.5 bg-amber-500 text-slate-950 font-medium text-xs rounded-lg hover:bg-amber-400 transition whitespace-nowrap">
+                Configurar Chave
+            </button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 1: DESPESAS                            -->
+        <!-- ========================================== -->
+        <div id="tab-expenses-content" class="space-y-6">
+
+            <!-- Área de Importação de Despesas -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-semibold flex items-center gap-2 text-slate-100">
+                            <i data-lucide="file-up" class="w-5 h-5 text-emerald-400"></i>
+                            Importar Extrato ou Fatura de Despesas
+                        </h2>
+                        <p class="text-xs text-slate-400">Importe extratos ou faturas: saídas vão para Despesas e entradas para Receitas (suporta seleção múltipla)</p>
+                    </div>
+                    <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-xs">
+                        <button id="tabFile" onclick="ExpensesTab.switchImportTab('file')" class="px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white transition">Arquivo AI</button>
+                        <button id="tabText" onclick="ExpensesTab.switchImportTab('json')" class="px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-white transition">Arrastar JSON</button>
+                    </div>
+                </div>
+
+                <!-- Entrada 1: Drag and Drop Geral -->
+                <div id="importFileContainer" class="block">
+                    <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-emerald-500/50 bg-slate-900/40 rounded-xl p-6 sm:p-8 text-center transition cursor-pointer">
+                        <input type="file" id="fileInput" onchange="ExpensesTab.handleFileSelect(event)" accept=".txt,.csv,.pdf,.png,.jpg,.jpeg,.json" multiple class="hidden">
+                        <div onclick="document.getElementById('fileInput').click()" class="flex flex-col items-center gap-3">
+                            <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
+                                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-200">Arraste arquivos aqui ou <span class="text-emerald-400 underline">clique para selecionar múltiplos</span></p>
+                                <p class="text-xs text-slate-400 mt-1">Suporta múltiplos arquivos PDF, Imagens (PNG/JPG), TXT/CSV e JSON</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entrada 2: Drag and Drop Dedicado JSON -->
+                <div id="importJsonContainer" class="hidden">
+                    <div id="dropZoneJson" class="border-2 border-dashed border-emerald-500/50 hover:border-emerald-400 bg-slate-900/60 rounded-xl p-6 sm:p-8 text-center transition cursor-pointer group">
+                        <input type="file" id="jsonFileInput" onchange="ExpensesTab.handleJsonFileSelect(event)" accept=".json" multiple class="hidden">
+                        <div onclick="document.getElementById('jsonFileInput').click()" class="flex flex-col items-center gap-3">
+                            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/30 group-hover:scale-110 transition">
+                                <i data-lucide="file-json" class="w-8 h-8"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-200">Arraste arquivos <span class="text-emerald-400 font-mono font-bold">.JSON</span> aqui ou <span class="text-emerald-400 underline">clique para selecionar múltiplos</span></p>
+                                <p class="text-xs text-slate-400 mt-1">Processamento local instantâneo de múltiplos JSONs sem necessidade de chave de API</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feedback de Carregamento -->
+                <div id="processingState" class="hidden p-4 bg-slate-900/90 border border-emerald-500/30 rounded-xl items-center justify-between gap-4 animate-pulse">
+                    <div class="flex items-center gap-3">
+                        <div class="animate-spin text-emerald-400">
+                            <i data-lucide="loader-2" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-200" id="processingTitle">Lendo arquivo...</p>
+                            <p id="processingStep" class="text-xs text-slate-400">Extraindo dados e inserindo no painel.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de Arquivos Considerados -->
+                <div class="border-t border-slate-700/60 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <i data-lucide="files" class="w-4 h-4 text-emerald-400"></i>
+                            Arquivos & Fontes de Despesas Ativas
+                        </h3>
+                        <button onclick="ExpensesTab.clearAllSources()" class="text-[11px] text-red-400 hover:underline flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Remover Todas
+                        </button>
+                    </div>
+                    <div id="fileListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPIs de Despesas -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider" id="kpiTotalLabel">Total do Mês (BRL)</span>
+                        <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                            <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiTotalMain">R$ 0,00</div>
+                    <div class="mt-2 flex items-center gap-1.5 text-xs">
+                        <span class="text-slate-400">Comparado ao mês ant.:</span>
+                        <span id="kpiDiffPercent" class="font-semibold text-emerald-400">0%</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider" id="kpiForeignLabel">Compras em USD</span>
+                        <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+                            <i data-lucide="globe" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiForeignTotal">$ 0,00</div>
+                    <div class="mt-2 text-xs text-slate-400 flex items-center justify-between">
+                        <div>Convertido na moeda atual: <span id="kpiForeignConverted" class="text-slate-300 font-medium">R$ 0,00</span></div>
+                        <span id="kpiForeignDiffPercent" class="font-semibold text-slate-400">0%</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Média Diária de Gastos</span>
+                        <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiDailyAvg">R$ 0,00</div>
+                    <div class="mt-2 flex items-center gap-1.5 text-xs">
+                        <span class="text-slate-400">vs Mês anterior:</span>
+                        <span id="kpiDailyAvgDiff" class="font-semibold text-slate-400">0%</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Maior Compra do Mês</span>
+                        <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiMaxExpense">R$ 0,00</div>
+                    <div class="mt-2 flex items-center justify-between gap-2 text-xs">
+                        <span class="text-slate-400 truncate" id="kpiMaxExpenseDesc">Nenhum lançamento</span>
+                        <span id="kpiMaxDiff" class="font-semibold text-slate-400 flex-shrink-0">0%</span>
+                    </div>
+                </div>
+
+                <!-- Análise por Dia da Semana -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 md:col-span-2 shadow-xl flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                                <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-400"></i>
+                                Análise de Gastos por Dia da Semana
+                            </h3>
+                            <p class="text-xs text-slate-400">Padrão de consumo semanal no mês de referência selecionado</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700/80 flex items-center gap-1.5">
+                                <span class="text-slate-400">Média Semanal vs Mês ant.:</span>
+                                <span id="kpiWeekdayDiff" class="font-bold text-slate-400">0%</span>
+                            </div>
+
+                            <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-xs font-medium">
+                                <button id="weekdayModeAvg" onclick="ExpensesTab.setWeekdayMode('avg')" class="px-2.5 py-1 rounded-md bg-emerald-600 text-white transition">Média</button>
+                                <button id="weekdayModeMax" onclick="ExpensesTab.setWeekdayMode('max')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Máximo</button>
+                                <button id="weekdayModeRecent" onclick="ExpensesTab.setWeekdayMode('recent')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Últimos 7 Dias</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative min-h-[260px] pt-4">
+                        <canvas id="weekdayChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Acompanhamento de Teto de Gastos / Budgeting -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="target" class="w-5 h-5 text-emerald-400"></i>
+                            Acompanhamento do Teto de Gastos (Budgeting)
+                        </h3>
+                        <p class="text-xs text-slate-400">Acompanhe a utilização dos limites orçamentários por categoria no mês selecionado</p>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div id="budgetAlertBadge" class="hidden text-xs bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 animate-pulse">
+                            <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+                            <span>Categorias estouradas!</span>
+                        </div>
+
+                        <button onclick="Utils.toggleModal('budgetModal')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-xl transition flex items-center gap-1.5 shadow-md">
+                            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                            Ajustar Tetos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumo Geral do Teto de Gastos -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-700/70">
+                    <div class="flex flex-col">
+                        <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Teto Total Definido</span>
+                        <span id="budgetTotalLimit" class="text-lg font-bold text-slate-200">R$ 0,00</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Total Comprometido</span>
+                        <span id="budgetTotalSpent" class="text-lg font-bold text-slate-200">R$ 0,00</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Uso Geral do Orçamento</span>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span id="budgetTotalPercent" class="text-lg font-bold text-emerald-400">0%</span>
+                            <div class="flex-1 bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                                <div id="budgetTotalProgressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid de Categorias -->
+                <div id="categoryBudgetGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Cards gerados via JS -->
+                </div>
+            </section>
+
+            <!-- Gráficos de Despesas -->
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Evolução Diária -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-3 flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="line-chart" class="w-4 h-4 text-emerald-400"></i>
+                            Evolução Diária de Gastos (Mês Selecionado)
+                        </h3>
+                        <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-[11px] font-medium self-start sm:self-auto">
+                            <button id="timelineModeGeral" onclick="ExpensesTab.setTimelineMode('geral')" class="px-2.5 py-1 rounded-md bg-emerald-600 text-white transition">Visão Geral</button>
+                            <button id="timelineModeCat" onclick="ExpensesTab.setTimelineMode('category')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Por Categoria</button>
+                        </div>
+                    </div>
+                    <div class="relative flex-1 min-h-[260px]">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Comparativo Mês a Mês -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-3 flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i>
+                            Comparativo Histórico Mês a Mês
+                        </h3>
+                        <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-[11px] font-medium self-start sm:self-auto">
+                            <button id="monthlyModeGeral" onclick="ExpensesTab.setMonthlyMode('geral')" class="px-2.5 py-1 rounded-md bg-emerald-600 text-white transition">Visão Geral</button>
+                            <button id="monthlyModeCat" onclick="ExpensesTab.setMonthlyMode('category')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Por Categoria (100%)</button>
+                        </div>
+                    </div>
+                    <div class="relative min-h-[240px]">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Rosca por Categoria -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-3 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i>
+                            Gastos por Categoria (Mês Selecionado)
+                        </h3>
+                    </div>
+                    <div class="relative flex-1 min-h-[280px] max-h-[360px] flex items-center justify-center">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tabela de Transações de Despesas -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="list" class="w-5 h-5 text-emerald-400"></i>
+                            Lançamentos de Despesas (Mês Selecionado)
+                        </h3>
+                        <p class="text-xs text-slate-400">Gerencie, reclassifique categorias ou busque despesas do mês ativo</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div class="relative flex-1 sm:w-60">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="searchInput" oninput="ExpensesTab.applyFilters()" placeholder="Buscar estabelecimento..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <select id="categoryFilter" onchange="ExpensesTab.applyFilters()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                            <option value="ALL">Todas Categorias</option>
+                        </select>
+
+                        <button onclick="ExpensesTab.exportCSV()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV
+                        </button>
+                        <button onclick="ExpensesTab.exportJSON()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                            <i data-lucide="file-json" class="w-3.5 h-3.5"></i> JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela -->
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                            <tr>
+                                <th class="py-3 px-4 cursor-pointer" onclick="ExpensesTab.sortTable('date')">
+                                    <div class="flex items-center gap-1">Data <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
+                                </th>
+                                <th class="py-3 px-4">Estabelecimento / Descrição</th>
+                                <th class="py-3 px-4">Fonte / Arquivo</th>
+                                <th class="py-3 px-4">Categoria</th>
+                                <th class="py-3 px-4 text-right">Moeda Orig.</th>
+                                <th class="py-3 px-4 text-right cursor-pointer" onclick="ExpensesTab.sortTable('convertedAmount')">
+                                    <div class="flex items-center justify-end gap-1"><span id="tableHeaderCurrency">Valor</span> <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
+                                </th>
+                                <th class="py-3 px-4 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody" class="divide-y divide-slate-700/50">
+                            <!-- Injetado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+                    <span id="tableCountInfo">Mostrando 0 lançamentos</span>
+                    <span id="tableTotalFiltered" class="font-medium text-slate-300">Soma filtrada: 0,00</span>
+                </div>
+            </section>
+
+            <!-- Insights por IA de Despesas -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 bg-gradient-to-br from-amber-500/20 to-emerald-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                            <i data-lucide="sparkles" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                                Insights & Diagnóstico de Despesas por IA
+                            </h3>
+                            <p class="text-xs text-slate-400">Análise consultiva inteligente calculada com base no histórico importado</p>
+                        </div>
+                    </div>
+                    <button onclick="ExpensesTab.generateAiDiagnosis()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                        <i data-lucide="bot" class="w-4 h-4"></i>
+                        Gerar Análise via IA
+                    </button>
+                </div>
+
+                <div id="aiDiagnosisContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-amber-400 font-semibold text-xs">
+                            <i data-lucide="alert-circle" class="w-4 h-4"></i> Pontos de Atenção
+                        </div>
+                        <p id="aiDiagPoints" class="text-xs text-slate-300 leading-relaxed">
+                            Clique em "Gerar Análise via IA" para identificar desvios de orçamento e anomalias de consumo.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+                            <i data-lucide="lightbulb" class="w-4 h-4"></i> Recomendações de Otimização
+                        </div>
+                        <p id="aiDiagRecs" class="text-xs text-slate-300 leading-relaxed">
+                            A IA irá sugerir cortes em categorias específicas com base na comparação com meses anteriores.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-cyan-400 font-semibold text-xs">
+                            <i data-lucide="trending-down" class="w-4 h-4"></i> Síntese de Comportamento
+                        </div>
+                        <p id="aiDiagSummary" class="text-xs text-slate-300 leading-relaxed">
+                            Veja o resumo do padrão de gastos e a projeção de gastos por dia da semana.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 2: RECEITAS & PROVENTOS                -->
+        <!-- ========================================== -->
+        <div id="tab-incomes-content" class="hidden space-y-6">
+
+            <!-- Cabeçalho e Importação de Receitas -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base sm:text-lg font-semibold flex items-center gap-2 text-slate-100">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-cyan-400"></i>
+                        Receitas, Salários e Proventos de Investimentos
+                    </h2>
+                    <p class="text-xs text-slate-400">Importe extratos, informes ou recibos: entradas vão para Receitas e saídas para Despesas</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="IncomesTab.openIncomeModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Nova Receita
+                    </button>
+                    <label class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl cursor-pointer transition flex items-center gap-1.5">
+                        <i data-lucide="file-up" class="w-4 h-4 text-cyan-400"></i>
+                        Importar extrato
+                        <input type="file" onchange="IncomesTab.handleIncomeFileSelect(event)" accept=".json,.pdf,.png,.jpg,.jpeg,.webp,.txt,.csv" multiple class="hidden">
+                    </label>
+                </div>
+            </section>
+
+            <!-- KPIs de Receitas -->
+            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider" id="kpiIncomeTotalLabel">Total de Receitas</span>
+                        <div class="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg">
+                            <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiIncomeTotalMain">R$ 0,00</div>
+                    <div class="mt-2 flex items-center gap-1.5 text-xs">
+                        <span class="text-slate-400">vs Mês anterior:</span>
+                        <span id="kpiIncomeDiffPercent" class="font-semibold text-emerald-400">0%</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Renda Recorrente (Fixa)</span>
+                        <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                            <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-emerald-400" id="kpiIncomeRecurrentMain">R$ 0,00</div>
+                    <div class="mt-2 text-xs text-slate-400 flex items-center justify-between">
+                        <span id="kpiIncomeRecPercent">0% Fixo / 0% Variável</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Renda Variável / Proventos</span>
+                        <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+                            <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-cyan-400" id="kpiIncomeVariableMain">R$ 0,00</div>
+                    <div class="mt-2 text-xs text-slate-400">
+                        <span>Dividendos, FIIs e bônus</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Maior Entrada do Mês</span>
+                        <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+                            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiIncomeMax">R$ 0,00</div>
+                    <div class="mt-2 text-xs text-slate-400 truncate" id="kpiIncomeMaxDesc">
+                        Nenhum lançamento
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gráficos de Receitas -->
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Rosca de Receitas por Categoria -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i>
+                            Distribuição de Fontes de Receita
+                        </h3>
+                    </div>
+                    <div class="relative flex-1 min-h-[260px] flex items-center justify-center">
+                        <canvas id="incomeCategoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Timeline de Receitas -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-2 flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="line-chart" class="w-4 h-4 text-cyan-400"></i>
+                            Evolução Diária de Receitas no Mês
+                        </h3>
+                        <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-[11px] font-medium self-start sm:self-auto">
+                            <button id="incomeTimelineModeGeral" onclick="IncomesTab.setIncomeTimelineMode('geral')" class="px-2.5 py-1 rounded-md bg-cyan-600 text-white transition">Geral</button>
+                            <button id="incomeTimelineModeCat" onclick="IncomesTab.setIncomeTimelineMode('category')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Por Categoria</button>
+                        </div>
+                    </div>
+                    <div class="relative flex-1 min-h-[260px]">
+                        <canvas id="incomeTimelineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Histórico Mês a Mês de Receitas -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-3 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-cyan-400"></i>
+                            Crescimento Histórico de Receitas Mês a Mês
+                        </h3>
+                    </div>
+                    <div class="relative min-h-[220px]">
+                        <canvas id="incomeMonthlyChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tabela de Receitas -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="list" class="w-5 h-5 text-cyan-400"></i>
+                            Lançamentos de Receitas & Proventos (Mês Selecionado)
+                        </h3>
+                        <p class="text-xs text-slate-400">Acompanhe seus rendimentos e filtre por categorias ou tipos</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div class="relative flex-1 sm:w-56">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="incomeSearchInput" oninput="IncomesTab.applyFilters()" placeholder="Buscar fonte ou receita..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+                        </div>
+
+                        <select id="incomeCategoryFilter" onchange="IncomesTab.applyFilters()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
+                            <option value="ALL">Todas Categorias</option>
+                        </select>
+
+                        <select id="incomeTypeFilter" onchange="IncomesTab.applyFilters()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
+                            <option value="ALL">Todos os Tipos</option>
+                            <option value="recurrent">Apenas Fixas (Salários/Aluguéis)</option>
+                            <option value="variable">Apenas Variáveis (Dividendos/FIIs)</option>
+                        </select>
+
+                        <button onclick="IncomesTab.exportCSV()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV
+                        </button>
+                        <button onclick="IncomesTab.exportJSON()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                            <i data-lucide="file-json" class="w-3.5 h-3.5"></i> JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Receitas -->
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+                            <tr>
+                                <th class="py-3 px-4 cursor-pointer" onclick="IncomesTab.sortIncomeTable('date')">
+                                    <div class="flex items-center gap-1">Data <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
+                                </th>
+                                <th class="py-3 px-4">Fonte / Descrição</th>
+                                <th class="py-3 px-4">Categoria de Provento</th>
+                                <th class="py-3 px-4 text-right">Moeda Orig.</th>
+                                <th class="py-3 px-4 text-right cursor-pointer" onclick="IncomesTab.sortIncomeTable('convertedAmount')">
+                                    <div class="flex items-center justify-end gap-1"><span id="incomeTableHeaderCurrency">Valor</span> <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
+                                </th>
+                                <th class="py-3 px-4 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incomeTableBody" class="divide-y divide-slate-700/50">
+                            <!-- Injetado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+                    <span id="incomeTableCountInfo">Mostrando 0 receitas</span>
+                    <span id="incomeTableTotalFiltered" class="font-medium text-emerald-400">Total filtrado: 0,00</span>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 3: SAÚDE FINANCEIRA & BALANÇO GERAL    -->
+        <!-- ========================================== -->
+        <div id="tab-health-content" class="hidden space-y-6">
+
+            <!-- Painel de Destaque: Score de Saúde Financeira FinanAI -->
+            <section class="bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+                    
+                    <!-- Lado Esquerdo: Gauge e Score Circular -->
+                    <div class="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                        <div class="relative w-36 h-36 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-full h-full" viewBox="0 0 100 100">
+                                <circle class="gauge-circle-bg" cx="50" cy="50" r="42" stroke-width="8"></circle>
+                                <circle id="healthScoreGauge" class="gauge-circle-progress" cx="50" cy="50" r="42" stroke-width="8" stroke-linecap="round"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="healthScoreVal" class="text-3xl font-extrabold text-slate-100 font-mono tracking-tight">--</span>
+                                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-medium">de 100</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2 justify-center sm:justify-start">
+                                <span id="healthScoreBadge" class="px-3 py-1 rounded-full text-xs font-bold border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                                    Score Calculado
+                                </span>
+                            </div>
+                            <h2 id="healthScoreLabel" class="text-xl sm:text-2xl font-bold text-slate-100">Calculando Saúde Financeira...</h2>
+                            <p id="healthScoreDesc" class="text-xs text-slate-400 max-w-md leading-relaxed">
+                                Avaliando taxa de poupança, cumprimento de tetos, regra 50/30/20 e proteção de emergência.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Lado Direito: Os 4 Pilares da Avaliação -->
+                    <div class="w-full lg:max-w-md bg-slate-950/60 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
+                        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                            <span>Pilares de Sustentabilidade</span>
+                            <span class="text-[10px] text-slate-500">Ponderado</span>
+                        </div>
+
+                        <!-- Pilar 1 -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-300 flex items-center gap-1.5">
+                                    <i data-lucide="piggy-bank" class="w-3.5 h-3.5 text-emerald-400"></i> Taxa de Poupança (35%)
+                                </span>
+                                <span id="pillarSavingsVal" class="font-mono font-bold text-slate-200">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div id="pillarSavingsBar" class="bg-emerald-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 2 -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-300 flex items-center gap-1.5">
+                                    <i data-lucide="target" class="w-3.5 h-3.5 text-cyan-400"></i> Disciplina de Tetos (25%)
+                                </span>
+                                <span id="pillarBudgetVal" class="font-mono font-bold text-slate-200">100%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div id="pillarBudgetBar" class="bg-cyan-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 3 -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-300 flex items-center gap-1.5">
+                                    <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i> Regra 50/30/20 (20%)
+                                </span>
+                                <span id="pillarRuleVal" class="font-mono font-bold text-slate-200">--</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div id="pillarRuleBar" class="bg-purple-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 4 -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-300 flex items-center gap-1.5">
+                                    <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-400"></i> Reserva de Emergência (20%)
+                                </span>
+                                <span id="pillarFundVal" class="font-mono font-bold text-slate-200">0 meses</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div id="pillarFundBar" class="bg-amber-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Cards de Balanço Líquido e Principais Indicadores -->
+            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Balanço Líquido -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden shadow-xl">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Balanço Líquido do Mês</span>
+                        <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                            <i data-lucide="scale" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-emerald-400" id="kpiHealthNet">R$ 0,00</div>
+                    <div class="mt-2 text-xs text-slate-400" id="kpiHealthNetDesc">
+                        Sobra livre para investir
+                    </div>
+                </div>
+
+                <!-- Taxa de Poupança -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden shadow-xl">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Taxa de Poupança / Aporte</span>
+                        <div class="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg">
+                            <i data-lucide="percent" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-cyan-400" id="kpiHealthSavingsRate">0%</div>
+                    <div class="mt-2 flex items-center gap-2">
+                        <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                            <div id="kpiHealthSavingsBar" class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <span class="text-[11px] text-slate-400">Meta: 20%+</span>
+                    </div>
+                </div>
+
+                <!-- Total Entradas vs Saídas -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden shadow-xl">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Entradas vs Saídas</span>
+                        <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+                            <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-xs space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Receitas:</span>
+                            <span id="kpiHealthIncomeVal" class="font-bold text-emerald-400 font-mono">R$ 0,00</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Despesas:</span>
+                            <span id="kpiHealthExpenseVal" class="font-bold text-red-400 font-mono">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cobertura de Custo de Vida -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden shadow-xl">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider">Proteção de Reserva</span>
+                        <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
+                            <i data-lucide="umbrella" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-100" id="kpiHealthReserveMonths">0 Meses</div>
+                    <div class="mt-2 text-xs text-slate-400">
+                        Meses de custo de vida cobertos
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção Regra 50/30/20 -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="border-b border-slate-700/60 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-5 h-5 text-purple-400"></i>
+                            Radiografia de Gastos: Regra 50 / 30 / 20
+                        </h3>
+                        <p class="text-xs text-slate-400">Comparativo da sua alocação real contra o padrão ouro de equilíbrio financeiro</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Necessidades -->
+                    <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-200">Necessidades (Essencial)</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Meta: 50%</span>
+                        </div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ruleNeedsSpent" class="text-lg font-bold text-slate-100">R$ 0,00</span>
+                            <span id="ruleNeedsPct" class="text-sm font-bold font-mono text-emerald-400">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="ruleNeedsBar" class="bg-emerald-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Moradia, Alimentação, Transporte e Saúde.</p>
+                    </div>
+
+                    <!-- Desejos -->
+                    <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-200">Desejos (Estilo de Vida)</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Meta: 30%</span>
+                        </div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ruleWantsSpent" class="text-lg font-bold text-slate-100">R$ 0,00</span>
+                            <span id="ruleWantsPct" class="text-sm font-bold font-mono text-cyan-400">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="ruleWantsBar" class="bg-cyan-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Lazer, Compras, Assinaturas e Outros.</p>
+                    </div>
+
+                    <!-- Poupança / Investimentos -->
+                    <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-200">Poupança & Aportes</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Meta: 20%</span>
+                        </div>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ruleSavingsSpent" class="text-lg font-bold text-slate-100">R$ 0,00</span>
+                            <span id="ruleSavingsPct" class="text-sm font-bold font-mono text-purple-400">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div id="ruleSavingsBar" class="bg-purple-500 h-full rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Sobra líquida e investimentos do mês.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gráfico Comparativo de Fluxo de Caixa Mês a Mês -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
+                            Evolução do Fluxo de Caixa Mensal (Receitas vs Despesas vs Saldo)
+                        </h3>
+                        <p class="text-xs text-slate-400">Acompanhe se seu patrimônio líquido está expandindo mês a mês</p>
+                    </div>
+                </div>
+                <div class="relative min-h-[280px]">
+                    <canvas id="healthCashflowChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Simulador de Fundo / Reserva de Emergência -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
+                <div class="border-b border-slate-700/60 pb-3">
+                    <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                        <i data-lucide="shield-alert" class="w-5 h-5 text-amber-400"></i>
+                        Simulador e Meta da Reserva de Emergência
+                    </h3>
+                    <p class="text-xs text-slate-400">Calcule o colchão de liquidez necessário para proteger seus investimentos de resgates antecipados</p>
+                </div>
+
+                <!-- Configurações do Simulador -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-slate-300">Meta de Cobertura:</label>
+                        <select id="emergencyTargetMonths" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-medium">
+                            <option value="3">3 Meses (CLT Estável)</option>
+                            <option value="6" selected>6 Meses (Recomendado Padrão)</option>
+                            <option value="12">12 Meses (Autônomo / Empreendedor)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-slate-300">Saldo Atual Guardado na Reserva:</label>
+                        <input type="number" id="emergencyCurrentSavings" step="100" min="0" placeholder="Ex: 15000" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-slate-300">Custo Mensal (Vazio = Automático do Mês):</label>
+                        <input type="number" id="emergencyCustomExpense" step="100" min="0" placeholder="Automático das Despesas" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+                </div>
+
+                <!-- Progresso e Resultados da Reserva -->
+                <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 sm:p-5 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center sm:text-left">
+                        <div>
+                            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Meta Total da Reserva</span>
+                            <p id="simTotalTarget" class="text-lg font-bold text-slate-100 font-mono">R$ 0,00</p>
+                        </div>
+                        <div>
+                            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Acumulado Atual</span>
+                            <p id="simCurrentSaved" class="text-lg font-bold text-amber-400 font-mono">R$ 0,00</p>
+                        </div>
+                        <div>
+                            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Falta Acumular</span>
+                            <p id="simRemaining" class="text-lg font-bold text-slate-300 font-mono">R$ 0,00</p>
+                        </div>
+                        <div>
+                            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">Progresso da Meta</span>
+                            <p id="simProgressPercent" class="text-lg font-bold text-emerald-400 font-mono">0%</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                            <div id="simProgressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <p id="simTimeToTarget" class="text-xs text-slate-400">
+                            Preencha seus dados para calcular a estimativa de tempo para concluir sua reserva.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Consultoria e Diagnóstico Holístico por IA -->
+            <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 text-purple-400 rounded-xl border border-purple-500/30">
+                            <i data-lucide="bot" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                                Diagnóstico Holístico & Consultoria Patrimonial por IA
+                            </h3>
+                            <p class="text-xs text-slate-400">Plano de ação estratégico conectando suas receitas, despesas e investimentos</p>
+                        </div>
+                    </div>
+                    <button onclick="HealthTab.generateHealthAiDiagnosis()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        Gerar Diagnóstico Holístico via IA
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-purple-400 font-semibold text-xs">
+                            <i data-lucide="activity" class="w-4 h-4"></i> Diagnóstico de Sustentabilidade
+                        </div>
+                        <p id="healthDiagText" class="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+                            Clique em "Gerar Diagnóstico Holístico via IA" para uma avaliação clínica e precisa do seu fluxo financeiro.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-cyan-400 font-semibold text-xs">
+                            <i data-lucide="check-square" class="w-4 h-4"></i> Plano de Ação Imediato
+                        </div>
+                        <p id="healthActionPlanText" class="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+                            A IA indicará os passos prioritários para elevar seu Score de Saúde e otimizar os gastos excedentes.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i> Estratégia de Aportes
+                        </div>
+                        <p id="healthInvestmentText" class="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+                            Sugestão de direcionamento do superávit entre reserva de emergência, renda fixa e proventos passivos.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAIS DO SISTEMA                          -->
+    <!-- ========================================== -->
+
+    <!-- Modal IDE de Inspeção de Documento / JSON -->
+    <div id="diagnosticModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
+                <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                    <i data-lucide="bug" class="w-5 h-5"></i>
+                    <span>IDE de Diagnóstico: Inspeção do Arquivo / Mês</span>
+                </div>
+                <button onclick="Utils.toggleModal('diagnosticModal')" class="text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto space-y-4 custom-scrollbar text-xs">
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <span class="text-slate-400">Arquivo / Contexto Inspecionado: </span>
+                        <strong id="diagFileName" class="text-emerald-400">Nenhum</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Método de Leitura: </span>
+                        <span id="diagReadingMethod" class="px-2 py-0.5 rounded bg-slate-700 text-slate-200 font-mono">Leitura JSON</span>
+                    </div>
+                </div>
+
+                <div id="diagAlertContainer" class="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-300 text-xs">
+                    <p id="diagAlertText">Conteúdo extraído ou payload de dados correspondente ao mês de referência selecionado.</p>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-semibold text-slate-300">Texto Extraído / Conteúdo Bruto do Documento:</label>
+                        <button onclick="ExpensesTab.copyRawText()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3 h-3"></i> Copiar Texto
+                        </button>
+                    </div>
+                    <pre id="diagRawText" class="w-full bg-slate-950 text-slate-300 border border-slate-800 rounded-xl p-3 h-48 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap leading-relaxed custom-scrollbar">Nenhum texto processado ainda.</pre>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-semibold text-slate-300 mb-1.5 block">Estrutura JSON do Lançamento:</label>
+                        <button onclick="ExpensesTab.copyJsonResponse()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3 h-3"></i> Copiar JSON
+                        </button>
+                    </div>
+                    <pre id="diagJsonResponse" class="w-full bg-slate-950 text-emerald-300 border border-slate-800 rounded-xl p-3 h-36 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap leading-relaxed custom-scrollbar">{}</pre>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 border-t border-slate-800 bg-slate-900/90 flex justify-end">
+                <button onclick="Utils.toggleModal('diagnosticModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-lg transition">
+                    Fechar Inspeção
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração de Teto de Gastos (Budgeting) -->
+    <div id="budgetModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3 flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                        <i data-lucide="target" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-100">Definir Teto de Gastos por Categoria</h3>
+                        <p class="text-xs text-slate-400">Estabeleça metas mensais de limites por categoria (<span class="budgetCurrLabel">BRL</span>)</p>
+                    </div>
+                </div>
+                <button onclick="Utils.toggleModal('budgetModal')" class="text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div id="budgetInputsContainer" class="space-y-3 overflow-y-auto pr-1 custom-scrollbar flex-1 py-2">
+                <!-- Inputs gerados via JS -->
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-slate-700 flex-shrink-0">
+                <button onclick="ExpensesTab.resetBudgetLimits()" class="text-xs text-slate-400 hover:text-red-400 underline transition">
+                    Zerar Limites
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="Utils.toggleModal('budgetModal')" class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs rounded-xl transition">
+                        Cancelar
+                    </button>
+                    <button onclick="ExpensesTab.saveBudgetSettings()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-xl transition shadow-lg">
+                        Salvar Tetos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração Geral (API Key + Taxa Câmbio) -->
+    <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i>
+                    Configurações do FinanAI
+                </h3>
+                <button onclick="Utils.toggleModal('configModal')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-slate-300">Taxa de Câmbio Personalizada (1 USD = ? BRL):</label>
+                    <input type="number" id="exchangeRateInput" step="0.01" min="0.1" value="5.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+                    <p class="text-[11px] text-slate-400">Usada para conversão entre Reais e Dólares em todo o app.</p>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="aiProviderInput" class="text-xs font-medium text-slate-300">Provedor de inteligência artificial:</label>
+                    <select id="aiProviderInput" onchange="App.onAiProviderChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100">
+                        <option value="gemini">Google Gemini</option>
+                        <option value="openai">OpenAI (ChatGPT)</option>
+                    </select>
+                    <p class="text-[11px] text-slate-400">Usado na leitura de extratos e nos diagnósticos. JSON não exige chave.</p>
+                </div>
+                <div id="geminiSettings" class="space-y-1.5">
+                    <label for="apiKeyInput" class="text-xs font-medium text-slate-300">Chave de API Gemini:</label>
+                    <input type="password" id="apiKeyInput" autocomplete="off" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 font-mono">
+                </div>
+                <div id="openaiSettings" class="hidden space-y-2">
+                    <label for="openaiApiKeyInput" class="text-xs font-medium text-slate-300">Chave de API OpenAI:</label>
+                    <input type="password" id="openaiApiKeyInput" autocomplete="off" placeholder="sk-..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 font-mono">
+                    <label for="openaiModelInput" class="text-xs font-medium text-slate-300 block">Modelo OpenAI:</label>
+                    <input type="text" id="openaiModelInput" list="openaiModelOptions" value="gpt-4.1-mini" placeholder="gpt-4.1-mini" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 font-mono">
+                    <datalist id="openaiModelOptions">
+                        <option value="gpt-4.1-mini">GPT-4.1 mini</option>
+                        <option value="gpt-5.4-nano">GPT-5.4 nano</option>
+                        <option value="gpt-5.4-mini">GPT-5.4 mini</option>
+                        <option value="gpt-4.1">GPT-4.1</option>
+                    </datalist>
+                    <label class="flex items-center gap-2 text-xs text-slate-300">
+                        <input type="checkbox" id="openaiFallbackEnabled" checked> Tentar modelos alternativos automaticamente
+                    </label>
+                    <label for="openaiFallbackModelsInput" class="text-xs font-medium text-slate-300 block">Alternativas, em ordem de tentativa (uma por linha):</label>
+                    <textarea id="openaiFallbackModelsInput" rows="2" spellcheck="false" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 font-mono">gpt-5.4-nano
+gpt-5.4-mini</textarea>
+                    <p class="text-[11px] text-slate-400">Tenta o próximo em caso de modelo indisponível ou limite temporário. Os preços variam entre modelos. Saldo e limites de gastos pertencem à conta: trocar de modelo não repõe créditos. O acesso depende da sua chave.</p>
+                    <p class="text-[11px] text-slate-400">Use um modelo com suporte a imagens e JSON. A conexão usa a API OpenAI, com chave própria e cobrança conforme o uso da API.</p>
+                </div>
+                <p class="text-[11px] text-slate-400">As chaves ficam salvas neste navegador. Use em ambiente pessoal; para publicação com acesso de outras pessoas, proteja as chaves em um servidor.</p>
+                <div>
+                    <button id="testApiKeyButton" type="button" onclick="App.testApiKey()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 rounded-lg text-xs font-semibold transition disabled:opacity-50">
+                        Testar chave e modelo selecionados
+                    </button>
+                </div>
+
+                <!-- Painel de Feedback do Teste da Chave -->
+                <div id="apiKeyTestFeedback" class="hidden"></div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+                <a id="apiKeyHelpLink" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-emerald-400 hover:underline flex items-center gap-1">
+                    Obter chave Gemini
+                </a>
+                <button onclick="App.saveSettings()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-lg transition">
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro / Edição de Receitas -->
+    <div id="incomeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-cyan-400"></i>
+                    <span id="incomeModalTitle">Nova Receita</span>
+                </h3>
+                <button onclick="Utils.toggleModal('incomeModal')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="incomeForm" onsubmit="IncomesTab.saveIncomeFromModal(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="incomeEditId" value="">
+                <input type="hidden" id="incomeRootId" value="">
+
+                <div class="space-y-1">
+                    <label class="text-slate-300 font-medium">Data do Recebimento:</label>
+                    <input type="date" id="incomeDateInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-slate-300 font-medium">Descrição / Fonte Pagadora:</label>
+                    <input type="text" id="incomeDescInput" placeholder="Ex: Salário Empresa X, Dividendos PETR4, etc." required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-slate-300 font-medium">Categoria:</label>
+                        <select id="incomeCategoryInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+                            <!-- Injetado via JS -->
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-slate-300 font-medium">Tipo de Renda:</label>
+                        <select id="incomeTypeInput" onchange="IncomesTab.onIncomeTypeChange(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+                            <option value="recurrent">Recorrente (Mensal contínuo)</option>
+                            <option value="variable">Variável / Pontual (Neste mês)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Aviso de Recorrência Inteligente -->
+                <div id="recurrentNotice" class="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-300 text-[11px] flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                    <span><strong>Receita Recorrente:</strong> Aparecerá automaticamente em todos os meses seguintes. Você poderá ajustar manualmente o valor em qualquer mês específico quando houver pequenas variações!</span>
+                </div>
+
+                <!-- Painel de Escopo quando estiver Editando uma receita recorrente -->
+                <div id="recurrentEditScopeContainer" class="hidden p-3 bg-slate-900/90 border border-slate-700 rounded-xl space-y-2">
+                    <span class="text-slate-300 font-semibold text-xs flex items-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i> Onde aplicar este ajuste?
+                    </span>
+                    <div class="space-y-2 text-slate-300 text-[11px]">
+                        <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-800 transition">
+                            <input type="radio" name="recurrenceScope" value="single_month" checked class="text-cyan-500 focus:ring-cyan-500">
+                            <span>Ajustar <strong>apenas em <span id="recurrentScopeMonthLabel">este mês</span></strong> (variação pontual deste mês)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-800 transition">
+                            <input type="radio" name="recurrenceScope" value="all_future" class="text-cyan-500 focus:ring-cyan-500">
+                            <span>Atualizar <strong>deste mês em diante</strong> (reajuste permanente)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-slate-300 font-medium">Moeda:</label>
+                        <select id="incomeCurrencyInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+                            <option value="BRL">Real (BRL - R$)</option>
+                            <option value="USD">Dólar (USD - $)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-slate-300 font-medium">Valor Recebido:</label>
+                        <input type="number" id="incomeAmountInput" step="0.01" min="0.01" placeholder="0.00" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 font-mono text-right">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                    <button type="button" onclick="Utils.toggleModal('incomeModal')" class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-xl transition shadow-lg">
+                        Salvar Receita
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Inclusão dos Scripts Modulares -->
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ai-provider.js"></script>
+    <script src="js/statement-import.js"></script>
+    <script src="js/tabs/expenses.js"></script>
+    <script src="js/tabs/incomes.js"></script>
+    <script src="js/tabs/health.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
