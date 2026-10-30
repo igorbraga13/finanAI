@@ -4,6 +4,8 @@ Aplicação modular de finanças pessoais e controle de investimentos com suport
 
 ## Despesas manuais
 
+O aplicativo não cria receitas de demonstração automaticamente. Ao abrir uma versão atualizada, os exemplos antigos de salário e rendimentos são removidos se ainda estiverem intactos. Exemplos editados, receitas cadastradas manualmente e receitas importadas são preservados.
+
 Na aba Despesas, clique em **Nova Despesa** e informe data, descrição, categoria, moeda (BRL ou USD) e valor. O lançamento é salvo no navegador, aparece como **Lançamento manual** e participa dos totais, gráficos e orçamento. O ícone de edição na tabela permite ajustar uma despesa existente. Limpar os arquivos importados mantém os lançamentos manuais.
 
 Teste local: `node tests/manual-expenses.cjs`.

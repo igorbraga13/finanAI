@@ -149,48 +149,32 @@ window.AppState = {
             this.uploadedIncomeFiles = [];
         }
 
-        // Se não houver receitas e houver despesas, sugerir receita padrão recorrente
-        if (this.incomes.length === 0 && this.transactions.length > 0) {
-            this.seedInitialIncomesIfEmpty();
-        }
-
+        this.removeLegacyDemoIncomes();
         this.updateAvailableMonths();
     },
 
-    seedInitialIncomesIfEmpty() {
-        const allMonths = this.getAllMonths();
-        const startMonth = allMonths.length > 0 ? allMonths[allMonths.length - 1].ym : new Date().toISOString().substring(0, 7);
-        
-        // Criar uma receita recorrente inicial a partir do mês mais antigo
-        this.incomes = [
-            {
-                id: 'inc_rec_salario',
-                date: `${startMonth}-05`,
-                description: 'Salário Mensal',
-                category: 'Salário / Pró-labore',
-                amountOriginal: 7500.00,
-                currency: 'BRL',
-                amountBrl: 7500.00,
-                type: 'recurrent',
-                monthlyAdjustments: {},
-                excludedMonths: [],
-                sourceId: 'seed_source'
-            },
-            {
-                id: 'inc_rec_fii',
-                date: `${startMonth}-15`,
-                description: 'Rendimentos FIIs (MXRF11 / HGLG11)',
-                category: 'Rendimentos FIIs',
-                amountOriginal: 480.00,
-                currency: 'BRL',
-                amountBrl: 480.00,
-                type: 'recurrent',
-                monthlyAdjustments: {},
-                excludedMonths: [],
-                sourceId: 'seed_source'
-            }
-        ];
-        this.saveIncomes();
+    removeLegacyDemoIncomes() {
+        // Só remove exemplos intactos; receitas editadas pelo usuário são preservadas.
+        const examples = {
+            inc_rec_salario: { description: 'Salário Mensal', category: 'Salário / Pró-labore', amount: 7500 },
+            inc_rec_fii: { description: 'Rendimentos FIIs (MXRF11 / HGLG11)', category: 'Rendimentos FIIs', amount: 480 }
+        };
+        const remaining = this.incomes.filter(item => {
+            const example = examples[item.id];
+            return !(example && item.sourceId === 'seed_source'
+                && item.description === example.description && item.category === example.category
+                && item.currency === 'BRL' && item.type === 'recurrent'
+                && item.amountOriginal === example.amount && item.amountBrl === example.amount
+                && Object.keys(item.monthlyAdjustments || {}).length === 0
+                && (item.excludedMonths || []).length === 0);
+        });
+        if (remaining.length === this.incomes.length) return;
+        this.incomes = remaining;
+        try {
+            localStorage.setItem('finanai_incomes', JSON.stringify(remaining));
+        } catch (error) {
+            console.warn('Não foi possível salvar a remoção das receitas de demonstração.');
+        }
     },
 
     subscribe(callback) {
