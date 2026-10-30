@@ -97,8 +97,13 @@ window.AppState = {
     listeners: [],
 
     init() {
-        this.displayCurrency = localStorage.getItem('finanai_display_currency') || 'BRL';
-        this.exchangeRateUsdBrl = parseFloat(localStorage.getItem('finanai_exchange_rate')) || 5.00;
+        try {
+            this.displayCurrency = localStorage.getItem('finanai_display_currency') || 'BRL';
+            this.exchangeRateUsdBrl = parseFloat(localStorage.getItem('finanai_exchange_rate')) || 5.00;
+        } catch (error) {
+            this.displayCurrency = 'BRL';
+            this.exchangeRateUsdBrl = 5.00;
+        }
         
         try {
             const savedLimits = localStorage.getItem('finanai_budget_limits');
@@ -214,14 +219,24 @@ window.AppState = {
         this.notify();
     },
 
-    saveBudgetLimits() {
-        localStorage.setItem('finanai_budget_limits', JSON.stringify(this.categoryBudgetLimits));
-        this.notify();
+    persistFinancialSetting(key, value, notify = true) {
+        let saved = false;
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            saved = true;
+        } catch (error) {
+            console.warn('Não foi possível salvar a configuração financeira no navegador.');
+        }
+        if (notify) this.notify();
+        return saved;
+    },
+
+    saveBudgetLimits(notify = true) {
+        return this.persistFinancialSetting('finanai_budget_limits', this.categoryBudgetLimits, notify);
     },
 
     saveEmergencyFund() {
-        localStorage.setItem('finanai_emergency_fund', JSON.stringify(this.emergencyFund));
-        this.notify();
+        return this.persistFinancialSetting('finanai_emergency_fund', this.emergencyFund);
     },
 
     setDisplayCurrency(curr) {

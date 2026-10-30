@@ -9,7 +9,8 @@ async function run() {
     const storage = new Map();
     const nodes = new Map();
     function element() {
-        return { innerHTML: '', children: [], appendChild(child) { this.children.push(child); } };
+        return { innerHTML: '', children: [], appendChild(child) { this.children.push(child); },
+            contains: () => false, querySelector: () => ({ addEventListener() {} }) };
     }
     const notifications = [];
     const context = vm.createContext({

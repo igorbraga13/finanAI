@@ -43,6 +43,75 @@ window.ExpensesTab = {
         this.renderCharts();
     },
 
+    openExpenseModal(expenseId = null) {
+        const item = expenseId ? window.AppState.transactions.find(t => t.id === expenseId) : null;
+        if (expenseId && !item) {
+            Utils.showNotification('Despesa não encontrada.', 'warning');
+            return;
+        }
+        document.getElementById('expenseForm').reset();
+        document.getElementById('expenseModalTitle').innerText = item ? 'Editar Despesa' : 'Nova Despesa';
+        document.getElementById('expenseEditId').value = item ? item.id : '';
+        document.getElementById('expenseCategoryInput').innerHTML = EXPENSE_CATEGORIES
+            .map(category => `<option value="${category}">${category}</option>`).join('');
+        const today = new Date();
+        const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const selectedMonth = window.AppState.selectedReferenceMonth;
+        document.getElementById('expenseDateInput').value = item ? item.date
+            : (selectedMonth && selectedMonth !== todayDate.slice(0, 7) ? `${selectedMonth}-01` : todayDate);
+        document.getElementById('expenseDescInput').value = item ? item.description : '';
+        document.getElementById('expenseCategoryInput').value = item ? item.category : EXPENSE_CATEGORIES[0];
+        document.getElementById('expenseCurrencyInput').value = item ? item.currency : window.AppState.displayCurrency;
+        document.getElementById('expenseAmountInput').value = item ? item.amountOriginal : '';
+        document.getElementById('expenseModal').classList.remove('hidden');
+        document.getElementById('expenseDescInput').focus();
+        if (window.lucide) window.lucide.createIcons();
+    },
+
+    saveExpenseFromModal(event) {
+        if (event) event.preventDefault();
+        const editId = document.getElementById('expenseEditId').value;
+        const date = document.getElementById('expenseDateInput').value;
+        const description = document.getElementById('expenseDescInput').value.trim();
+        const category = document.getElementById('expenseCategoryInput').value;
+        const currency = document.getElementById('expenseCurrencyInput').value;
+        const amountOriginal = Number(document.getElementById('expenseAmountInput').value);
+        const parsedDate = new Date(date + 'T00:00:00Z');
+        const amountBrl = amountOriginal * (currency === 'USD' ? window.AppState.exchangeRateUsdBrl : 1);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsedDate.getTime())
+            || parsedDate.toISOString().slice(0, 10) !== date || !description
+            || !EXPENSE_CATEGORIES.includes(category) || !['BRL', 'USD'].includes(currency)
+            || !Number.isFinite(amountOriginal) || amountOriginal < 0.01
+            || !Number.isFinite(amountBrl) || amountBrl <= 0) {
+            Utils.showNotification('Preencha data, descrição, categoria, moeda e valor válidos.', 'warning');
+            return;
+        }
+        const state = window.AppState;
+        const index = editId ? state.transactions.findIndex(t => t.id === editId) : -1;
+        if (editId && index === -1) {
+            Utils.showNotification('Despesa não encontrada. Abra o formulário novamente.', 'warning');
+            return;
+        }
+        const item = { ...(editId ? state.transactions[index] : {
+            id: 'exp_' + (window.crypto?.randomUUID?.() || Date.now() + '_' + Math.random().toString(36).slice(2)),
+            sourceId: 'manual_entry'
+        }), date, description, category, currency, amountOriginal, amountBrl };
+        const previous = state.transactions;
+        const previousMonth = state.selectedReferenceMonth;
+        state.transactions = editId ? state.transactions.map((t, i) => i === index ? item : t) : [item, ...state.transactions];
+        state.selectedReferenceMonth = date.slice(0, 7);
+        try {
+            state.saveExpenses();
+        } catch (error) {
+            state.transactions = previous;
+            state.selectedReferenceMonth = previousMonth;
+            Utils.showNotification('Não foi possível salvar a despesa. Verifique o armazenamento do navegador.', 'error');
+            return;
+        }
+        document.getElementById('expenseModal').classList.add('hidden');
+        Utils.showNotification(editId ? 'Despesa atualizada!' : 'Despesa adicionada!', 'success');
+    },
+
     switchImportTab(type) {
         const tabFile = document.getElementById('tabFile');
         const tabText = document.getElementById('tabText');
@@ -370,9 +439,9 @@ window.ExpensesTab = {
     clearAllSources() {
         if (!confirm('Deseja realmente remover todos os arquivos e despesas importadas?')) return;
         window.AppState.uploadedFiles = [];
-        window.AppState.transactions = [];
+        window.AppState.transactions = window.AppState.transactions.filter(t => t.sourceId === 'manual_entry');
         window.AppState.saveExpenses();
-        Utils.showNotification('Todas as despesas foram removidas.', 'info');
+        Utils.showNotification('Arquivos e despesas importadas removidos. Os lançamentos manuais foram mantidos.', 'info');
     },
 
     renderKPICards() {
@@ -466,6 +535,8 @@ window.ExpensesTab = {
     renderBudgetInputs() {
         const container = document.getElementById('budgetInputsContainer');
         if (!container) return;
+        // Notificações do estado não devem apagar campos enquanto são editados.
+        if (container.contains(document.activeElement)) return;
         container.innerHTML = '';
 
         const curr = window.AppState.displayCurrency;
@@ -484,32 +555,54 @@ window.ExpensesTab = {
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
                     <span class="text-xs font-semibold text-slate-400">${curr === 'BRL' ? 'R$' : '$'}</span>
-                    <input type="number" id="budget_input_${cat}" step="10" min="0" value="${limitVal.toFixed(0)}" class="w-28 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono text-right">
+                    <input type="number" id="budget_input_${cat}" step="0.01" min="0" value="${Number(limitVal.toFixed(2))}" class="w-28 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono text-right">
                 </div>
             `;
+            const input = item.querySelector('input');
+            input.addEventListener('input', () => this.updateBudgetLimit(cat, input.value));
+            input.addEventListener('change', () => this.updateBudgetLimit(cat, input.value, true));
             container.appendChild(item);
         });
+    },
+
+    updateBudgetLimit(category, rawValue, notify = false) {
+        if (rawValue === '' && !notify) return;
+        const value = Number(rawValue);
+        if (!EXPENSE_CATEGORIES.includes(category) || !Number.isFinite(value) || value < 0) return;
+        const rate = window.AppState.displayCurrency === 'USD' ? window.AppState.exchangeRateUsdBrl : 1;
+        window.AppState.categoryBudgetLimits[category] = Math.round(value * rate * 100) / 100;
+        const saved = window.AppState.saveBudgetLimits(notify);
+        Utils.setSaveStatus('budgetSaveStatus', saved);
     },
 
     saveBudgetSettings() {
         const curr = window.AppState.displayCurrency;
         const rate = window.AppState.exchangeRateUsdBrl;
-
-        EXPENSE_CATEGORIES.forEach(cat => {
+        const limits = { ...window.AppState.categoryBudgetLimits };
+        for (const cat of EXPENSE_CATEGORIES) {
             const input = document.getElementById(`budget_input_${cat}`);
             if (input) {
-                const val = parseFloat(input.value) || 0;
-                window.AppState.categoryBudgetLimits[cat] = curr === 'USD' ? val * rate : val;
+                if (input.value === input.defaultValue) continue;
+                const val = Number(input.value);
+                if (!Number.isFinite(val) || val < 0) {
+                    Utils.showNotification('Informe tetos válidos, iguais ou maiores que zero.', 'warning');
+                    return;
+                }
+                limits[cat] = Math.round(val * (curr === 'USD' ? rate : 1) * 100) / 100;
             }
-        });
-
-        window.AppState.saveBudgetLimits();
+        }
+        window.AppState.categoryBudgetLimits = limits;
+        const saved = window.AppState.saveBudgetLimits();
+        Utils.setSaveStatus('budgetSaveStatus', saved);
+        if (!saved) return;
         Utils.toggleModal('budgetModal');
-        Utils.showNotification('Tetos de gastos atualizados com sucesso!', 'success');
+        Utils.showNotification('Tetos de gastos salvos neste navegador!', 'success');
     },
 
     resetBudgetLimits() {
         window.AppState.categoryBudgetLimits = { ...DEFAULT_BUDGET_LIMITS_BRL };
+        const saved = window.AppState.saveBudgetLimits();
+        Utils.setSaveStatus('budgetSaveStatus', saved);
         this.renderBudgetInputs();
     },
 
@@ -1188,6 +1281,7 @@ window.ExpensesTab = {
     },
 
     getSourceName(sourceId) {
+        if (sourceId === 'manual_entry') return 'Lançamento manual';
         const source = window.AppState.uploadedFiles.find(f => f.id === sourceId);
         return source ? source.name : 'Outra Fonte';
     },
@@ -1241,11 +1335,15 @@ window.ExpensesTab = {
                     ${symbol} ${convertedVal.toFixed(2)}
                 </td>
                 <td class="py-3 px-4 text-center">
+                    <button type="button" data-edit-expense class="text-slate-400 hover:text-emerald-400 p-1 transition" title="Editar despesa" aria-label="Editar despesa">
+                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
                     <button onclick="ExpensesTab.deleteTransaction('${t.id}')" class="text-slate-500 hover:text-red-400 p-1 transition" title="Excluir Lançamento">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </td>
             `;
+            tr.querySelector('[data-edit-expense]').addEventListener('click', () => this.openExpenseModal(t.id));
             tbody.appendChild(tr);
         });
 

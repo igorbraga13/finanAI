@@ -144,7 +144,7 @@
 
             <!-- Área de Importação de Despesas -->
             <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <h2 class="text-base sm:text-lg font-semibold flex items-center gap-2 text-slate-100">
                             <i data-lucide="file-up" class="w-5 h-5 text-emerald-400"></i>
@@ -152,9 +152,14 @@
                         </h2>
                         <p class="text-xs text-slate-400">Importe extratos ou faturas: saídas vão para Despesas e entradas para Receitas (suporta seleção múltipla)</p>
                     </div>
-                    <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-xs">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="ExpensesTab.openExpenseModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Nova Despesa
+                        </button>
+                        <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-xs">
                         <button id="tabFile" onclick="ExpensesTab.switchImportTab('file')" class="px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white transition">Arquivo AI</button>
                         <button id="tabText" onclick="ExpensesTab.switchImportTab('json')" class="px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-white transition">Arrastar JSON</button>
+                        </div>
                     </div>
                 </div>
 
@@ -972,6 +977,7 @@
                         Simulador e Meta da Reserva de Emergência
                     </h3>
                     <p class="text-xs text-slate-400">Calcule o colchão de liquidez necessário para proteger seus investimentos de resgates antecipados</p>
+                    <p id="emergencySaveStatus" role="status" aria-live="polite" class="text-xs text-slate-400">As alterações são salvas automaticamente neste navegador.</p>
                 </div>
 
                 <!-- Configurações do Simulador -->
@@ -1155,6 +1161,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-slate-100">Definir Teto de Gastos por Categoria</h3>
                         <p class="text-xs text-slate-400">Estabeleça metas mensais de limites por categoria (<span class="budgetCurrLabel">BRL</span>)</p>
+                        <p id="budgetSaveStatus" role="status" aria-live="polite" class="text-xs text-slate-400">As alterações são salvas automaticamente neste navegador.</p>
                     </div>
                 </div>
                 <button onclick="Utils.toggleModal('budgetModal')" class="text-slate-400 hover:text-white transition">
@@ -1345,6 +1352,50 @@ gpt-5.4-mini</textarea>
                     <button type="submit" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-xl transition shadow-lg">
                         Salvar Receita
                     </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cadastro e edição manual de despesas -->
+    <div id="expenseModal" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 id="expenseModalTitle" class="text-base font-semibold text-slate-100">Nova Despesa</h3>
+                <button type="button" onclick="Utils.toggleModal('expenseModal')" aria-label="Fechar formulário de despesa" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="expenseForm" onsubmit="ExpensesTab.saveExpenseFromModal(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="expenseEditId" value="">
+                <div class="space-y-1">
+                    <label for="expenseDateInput" class="text-slate-300 font-medium">Data da Despesa:</label>
+                    <input type="date" id="expenseDateInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="space-y-1">
+                    <label for="expenseDescInput" class="text-slate-300 font-medium">Estabelecimento / Descrição:</label>
+                    <input type="text" id="expenseDescInput" required placeholder="Ex: Mercado, aluguel, transporte" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="space-y-1">
+                    <label for="expenseCategoryInput" class="text-slate-300 font-medium">Categoria:</label>
+                    <select id="expenseCategoryInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label for="expenseCurrencyInput" class="text-slate-300 font-medium">Moeda:</label>
+                        <select id="expenseCurrencyInput" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <option value="BRL">Real (BRL - R$)</option>
+                            <option value="USD">Dólar (USD - $)</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="expenseAmountInput" class="text-slate-300 font-medium">Valor da Despesa:</label>
+                        <input type="number" id="expenseAmountInput" step="0.01" min="0.01" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono text-right">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                    <button type="button" onclick="Utils.toggleModal('expenseModal')" class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition">Salvar Despesa</button>
                 </div>
             </form>
         </div>

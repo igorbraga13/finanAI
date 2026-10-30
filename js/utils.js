@@ -35,6 +35,15 @@ window.Utils = {
         }
     },
 
+    setSaveStatus(elementId, saved) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        element.textContent = saved
+            ? 'Alterações salvas neste navegador.'
+            : 'Não foi possível salvar. Verifique o armazenamento permitido no navegador; os valores podem se perder ao sair.';
+        element.className = saved ? 'text-xs text-emerald-400' : 'text-xs text-amber-400';
+    },
+
     showNotification(msg, type = 'info') {
         const toast = document.createElement('div');
         let bgClass = 'bg-slate-700';

@@ -17,9 +17,9 @@ window.HealthTab = {
         const savingsInput = document.getElementById('emergencyCurrentSavings');
         const expenseInput = document.getElementById('emergencyCustomExpense');
 
-        if (monthsInput) monthsInput.addEventListener('change', () => this.updateEmergencySettings());
-        if (savingsInput) savingsInput.addEventListener('input', () => this.updateEmergencySettings());
-        if (expenseInput) expenseInput.addEventListener('input', () => this.updateEmergencySettings());
+        if (monthsInput) monthsInput.addEventListener('change', () => this.updateEmergencySettings('targetMonths'));
+        if (savingsInput) savingsInput.addEventListener('input', () => this.updateEmergencySettings('currentSavings'));
+        if (expenseInput) expenseInput.addEventListener('input', () => this.updateEmergencySettings('customMonthlyExpense'));
     },
 
     render() {
@@ -28,6 +28,26 @@ window.HealthTab = {
         this.renderRule503020();
         this.renderEmergencySimulator();
         this.renderCharts();
+    },
+
+    getEmergencyReserveMetrics(totalExpenses = null) {
+        const state = window.AppState;
+        const curr = state.displayCurrency;
+        const fund = state.emergencyFund;
+        const factor = curr === 'USD' ? 1 / state.exchangeRateUsdBrl : 1;
+        const expenses = totalExpenses ?? state.getCurrentMonthExpenses()
+            .reduce((sum, item) => sum + state.convertAmount(item, curr), 0);
+        const customCost = (fund.customMonthlyExpense || 0) * factor;
+        // A reserva e o custo personalizado são armazenados em BRL.
+        // O padrão de R$ 2.500 também deve ser convertido ao exibir USD.
+        const monthlyCost = customCost > 0 ? customCost : (expenses > 0 ? expenses : 2500 * factor);
+        const currentSavedConverted = (fund.currentSavings || 0) * factor;
+        const targetMonths = fund.targetMonths || 6;
+        return {
+            monthlyCost, currentSavedConverted, targetMonths,
+            totalTarget: monthlyCost * targetMonths,
+            coverageMonths: monthlyCost > 0 ? currentSavedConverted / monthlyCost : 0
+        };
     },
 
     calculateHealthMetrics() {
@@ -89,10 +109,7 @@ window.HealthTab = {
         else ruleScore = 20;
 
         // 4. Cobertura da Reserva (peso 20%)
-        const monthlyCost = totalExpenses > 0 ? totalExpenses : 2500;
-        const currentSaved = window.AppState.emergencyFund.currentSavings || 0;
-        const currentSavedConverted = curr === 'USD' ? currentSaved / window.AppState.exchangeRateUsdBrl : currentSaved;
-        const coverageMonths = monthlyCost > 0 ? currentSavedConverted / monthlyCost : 0;
+        const { coverageMonths } = this.getEmergencyReserveMetrics(totalExpenses);
 
         let fundScore = 15;
         if (coverageMonths >= 6) fundScore = 100;
@@ -256,19 +273,7 @@ window.HealthTab = {
     renderEmergencySimulator() {
         const curr = window.AppState.displayCurrency;
         const fund = window.AppState.emergencyFund;
-        const currentData = window.AppState.getCurrentMonthExpenses();
-        const currentMonthCost = currentData.reduce((acc, t) => acc + window.AppState.convertAmount(t, curr), 0);
-
-        const monthlyCost = fund.customMonthlyExpense > 0 
-            ? (curr === 'USD' ? fund.customMonthlyExpense / window.AppState.exchangeRateUsdBrl : fund.customMonthlyExpense)
-            : (currentMonthCost > 0 ? currentMonthCost : 2500);
-
-        const targetMonths = fund.targetMonths || 6;
-        const totalTarget = monthlyCost * targetMonths;
-
-        const currentSavedConverted = curr === 'USD' 
-            ? (fund.currentSavings || 0) / window.AppState.exchangeRateUsdBrl 
-            : (fund.currentSavings || 0);
+        const { monthlyCost, targetMonths, totalTarget, currentSavedConverted } = this.getEmergencyReserveMetrics();
 
         const progressPct = totalTarget > 0 ? (currentSavedConverted / totalTarget) * 100 : 0;
         const remainingToSave = Math.max(totalTarget - currentSavedConverted, 0);
@@ -280,10 +285,10 @@ window.HealthTab = {
 
         if (targetMonthsInput) targetMonthsInput.value = targetMonths;
         if (currentSavingsInput && document.activeElement !== currentSavingsInput) {
-            currentSavingsInput.value = (fund.currentSavings || 0).toFixed(0);
+            currentSavingsInput.value = Number(currentSavedConverted.toFixed(2));
         }
         if (customExpenseInput && document.activeElement !== customExpenseInput) {
-            customExpenseInput.value = (fund.customMonthlyExpense || 0) > 0 ? (fund.customMonthlyExpense || 0).toFixed(0) : '';
+            customExpenseInput.value = fund.customMonthlyExpense > 0 ? Number(monthlyCost.toFixed(2)) : '';
         }
 
         // Preencher displays
@@ -313,22 +318,29 @@ window.HealthTab = {
         }
     },
 
-    updateEmergencySettings() {
+    updateEmergencySettings(changedField = null) {
         const targetMonthsInput = document.getElementById('emergencyTargetMonths');
         const currentSavingsInput = document.getElementById('emergencyCurrentSavings');
         const customExpenseInput = document.getElementById('emergencyCustomExpense');
+        if (currentSavingsInput?.validity?.badInput || customExpenseInput?.validity?.badInput) return;
 
         const targetMonths = parseInt(targetMonthsInput?.value) || 6;
         const currentSavings = parseFloat(currentSavingsInput?.value) || 0;
         const customExpense = parseFloat(customExpenseInput?.value) || 0;
+        if (![3, 6, 12].includes(targetMonths) || !Number.isFinite(currentSavings) || !Number.isFinite(customExpense)
+            || currentSavings < 0 || customExpense < 0) return;
+        const rate = window.AppState.displayCurrency === 'USD' ? window.AppState.exchangeRateUsdBrl : 1;
 
         window.AppState.emergencyFund = {
-            targetMonths,
-            currentSavings,
-            customMonthlyExpense: customExpense
+            targetMonths: !changedField || changedField === 'targetMonths' ? targetMonths : window.AppState.emergencyFund.targetMonths,
+            currentSavings: !changedField || changedField === 'currentSavings'
+                ? Math.round(currentSavings * rate * 100) / 100 : window.AppState.emergencyFund.currentSavings,
+            customMonthlyExpense: !changedField || changedField === 'customMonthlyExpense'
+                ? Math.round(customExpense * rate * 100) / 100 : window.AppState.emergencyFund.customMonthlyExpense
         };
 
-        window.AppState.saveEmergencyFund();
+        const saved = window.AppState.saveEmergencyFund();
+        Utils.setSaveStatus('emergencySaveStatus', saved);
         this.renderHealthScore();
         this.renderHealthKPIs();
         this.renderEmergencySimulator();

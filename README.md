@@ -2,6 +2,22 @@
 
 Aplicação modular de finanças pessoais e controle de investimentos com suporte a moedas BRL/USD, leitura inteligente de extratos via IA, sistema de receitas recorrentes inteligentes e diagnóstico consultivo integrado.
 
+## Despesas manuais
+
+Na aba Despesas, clique em **Nova Despesa** e informe data, descrição, categoria, moeda (BRL ou USD) e valor. O lançamento é salvo no navegador, aparece como **Lançamento manual** e participa dos totais, gráficos e orçamento. O ícone de edição na tabela permite ajustar uma despesa existente. Limpar os arquivos importados mantém os lançamentos manuais.
+
+Teste local: `node tests/manual-expenses.cjs`.
+
+## Salvamento de budgets e reserva de emergência
+
+Os tetos por categoria são salvos automaticamente durante a edição; a reserva de emergência também salva a meta de cobertura, o saldo guardado e o custo mensal personalizado. As configurações são restauradas ao recarregar ou reabrir o site no mesmo navegador e endereço. Os valores financeiros são armazenados em BRL e convertidos para a moeda selecionada na tela.
+
+O indicador de meses cobertos e o simulador usam a mesma base: saldo da reserva dividido pelo custo mensal personalizado, quando preenchido. Sem custo personalizado, usam as despesas do mês selecionado; sem despesas, usam uma base provisória de R$ 2.500. Por exemplo, R$ 5.000 guardados com custo mensal de R$ 5.000 correspondem a 1 mês coberto, em qualquer moeda de exibição.
+
+Cada seção informa se o salvamento funcionou. As configurações não são sincronizadas entre dispositivos ou navegadores e podem ser removidas ao limpar os dados do site. O endereço local e o GitHub Pages têm armazenamentos separados; em navegação privada, os dados podem durar apenas a sessão.
+
+Teste de persistência, usando armazenamento fictício: `node tests/financial-settings.cjs`.
+
 ## Importação de extratos com entradas e saídas
 
 Importe o extrato pela aba Despesas ou Receitas. A leitura por IA identifica os dois sentidos: saídas são registradas em Despesas e entradas em Receitas, com valores positivos em cada aba. PDF, imagens, TXT e CSV usam o provedor de IA selecionado nas configurações; JSON é processado localmente.
@@ -15,8 +31,6 @@ Importe o extrato pela aba Despesas ou Receitas. A leitura por IA identifica os 
 A categoria Transferências aparece nos filtros, cadastros e orçamento. Seu teto inicial é zero (sem limite definido), podendo ser ajustado nas configurações.
 
 Para JSONs mistos, use `transactionType: "expense"` ou `"income"`. Em receitas, `payerType: "person"` ou `"company"` identifica o remetente. A recorrência usa um campo separado, `recurrence: "variable"` (pontual) ou `"recurrent"` (recorrente explícita). O formato antigo `type: "variable"` / `"recurrent"` continua aceito para receitas. Sem indicação de direção, valores negativos são saídas; valores positivos mantêm a aba de importação por compatibilidade com os JSONs antigos.
-
-O arquivo [data/extrato_misto_exemplo.json](data/extrato_misto_exemplo.json) contém dados fictícios para experimentar a distribuição nas duas abas. Lançamentos já salvos não são reclassificados automaticamente; as regras se aplicam às novas importações.
 
 Verificação local, sem chave de API: `node tests/statement-import.cjs`.
 
@@ -59,12 +73,6 @@ organiador_financas/
 │       ├── expenses.js         # Módulo da Aba de Despesas (budgeting, faturas, gráficos)
 │       ├── incomes.js          # Módulo da Aba de Receitas & Proventos (com Recorrência Inteligente)
 │       └── health.js           # Módulo da Aba de Saúde Financeira & Balanço Líquido
-├── data/                       # Arquivos de exemplo e extratos (.json)
-│   ├── inter_agosto.json
-│   ├── inter_setembro.json
-│   ├── nubank_agosto.json
-│   ├── nubank_setembro.json
-│   └── receitas_exemplo.json
 └── README.md
 ```
 
