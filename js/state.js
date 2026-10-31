@@ -72,6 +72,27 @@ const EXPENSE_RULE_MAP = {
 };
 
 window.AppState = {
+    projectionSettings: { months: 6, basis: 3, initial: 0, income: null, expense: null, contribution: 0, rate: 5, extras: [] },
+    normalizeProjectionSettings(value) {
+        const defaults = { months: 6, basis: 3, initial: 0, income: null, expense: null, contribution: 0, rate: 5, extras: [] };
+        if (value == null) return defaults;
+        const validMoney = n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1e12;
+        if (!value || typeof value !== 'object' || ![3, 6, 12].includes(value.months)
+            || ![3, 6].includes(value.basis) || !validMoney(value.initial) || !validMoney(value.contribution)
+            || !(value.income === null || validMoney(value.income)) || !(value.expense === null || validMoney(value.expense))
+            || !validMoney(value.rate) || value.rate > 100 || !Array.isArray(value.extras) || value.extras.length > 20) {
+            throw new Error('Premissas da projeção inválidas.');
+        }
+        const extras = value.extras.map(item => {
+            if (!item || !['income', 'expense'].includes(item.type) || typeof item.name !== 'string' || item.name.length > 80
+                || !validMoney(item.amount) || !Number.isInteger(item.duration) || item.duration < 1 || item.duration > 120) {
+                throw new Error('Lançamento extra da projeção inválido.');
+            }
+            return { type: item.type, name: item.name, amount: item.amount, duration: item.duration };
+        });
+        return { months: value.months, basis: value.basis, initial: value.initial, income: value.income,
+            expense: value.expense, contribution: value.contribution, rate: value.rate, extras };
+    },
     transactions: [],       // Despesas
     incomes: [],            // Receitas
     uploadedFiles: [],      // Fontes de Despesas
@@ -97,6 +118,9 @@ window.AppState = {
     listeners: [],
 
     init() {
+        try {
+            this.projectionSettings = this.normalizeProjectionSettings(JSON.parse(localStorage.getItem('finanai_projection_settings')));
+        } catch (_) { this.projectionSettings = this.normalizeProjectionSettings(null); }
         try {
             this.displayCurrency = localStorage.getItem('finanai_display_currency') || 'BRL';
             this.exchangeRateUsdBrl = parseFloat(localStorage.getItem('finanai_exchange_rate')) || 5.00;

@@ -35,6 +35,7 @@ window.ExpensesTab = {
     },
 
     render() {
+        this.renderMonthLabels();
         this.renderFileList();
         this.renderBudgetInputs();
         this.applyFilters();
@@ -42,6 +43,19 @@ window.ExpensesTab = {
         this.renderBudgetSection();
         if (window.ExpenseComparison) window.ExpenseComparison.render();
         this.renderCharts();
+    },
+
+    renderMonthLabels() {
+        const month = window.AppState.selectedReferenceMonth;
+        let label = 'Sem mês selecionado';
+        if (month && /^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+            const [year, number] = month.split('-').map(Number);
+            const name = new Date(year, number - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
+            label = name.charAt(0).toUpperCase() + name.slice(1) + '/' + year;
+        }
+        document.querySelectorAll('[data-expense-month]').forEach(element => {
+            element.textContent = `(${label})`;
+        });
     },
 
     openExpenseModal(expenseId = null) {

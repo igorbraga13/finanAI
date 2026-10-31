@@ -16,6 +16,7 @@ window.App = {
         window.ExpensesTab.init();
         window.IncomesTab.init();
         window.HealthTab.init();
+        window.ProjectionsTab.init();
 
         // Configurar UI Geral
         this.updateMonthSelector();
@@ -43,7 +44,7 @@ window.App = {
     switchTab(tabName) {
         window.AppState.activeTab = tabName;
 
-        const tabs = ['expenses', 'incomes', 'health'];
+        const tabs = ['expenses', 'incomes', 'health', 'projections'];
         tabs.forEach(t => {
             const content = document.getElementById(`tab-${t}-content`);
             const btn = document.getElementById(`tab-btn-${t}`);
@@ -59,6 +60,7 @@ window.App = {
                     if (t === 'expenses') btn.classList.add('border-emerald-500/40');
                     else if (t === 'incomes') btn.classList.add('border-cyan-500/40');
                     else if (t === 'health') btn.classList.add('border-purple-500/40');
+                    else if (t === 'projections') btn.classList.add('border-emerald-500/40');
                 }
             } else {
                 if (content) {
@@ -84,6 +86,8 @@ window.App = {
             window.IncomesTab.render();
         } else if (tab === 'health') {
             window.HealthTab.render();
+        } else if (tab === 'projections') {
+            window.ProjectionsTab.render();
         }
     },
 

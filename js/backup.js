@@ -2,6 +2,7 @@
 window.Backup = {
     pending: null,
     fields: {
+        projectionSettings: 'finanai_projection_settings',
         transactions: 'finanai_transactions', incomes: 'finanai_incomes',
         uploadedFiles: 'finanai_files', uploadedIncomeFiles: 'finanai_income_files',
         categoryBudgetLimits: 'finanai_budget_limits', emergencyFund: 'finanai_emergency_fund',
@@ -92,6 +93,7 @@ window.Backup = {
             || !num(fund.customMonthlyExpense) || !['BRL', 'USD'].includes(d.displayCurrency)
             || !num(d.exchangeRateUsdBrl) || d.exchangeRateUsdBrl === 0) fail();
         return { format: 'finanai-backup', version: 1, createdAt: input.createdAt, data: {
+            projectionSettings: AppState.normalizeProjectionSettings(d.projectionSettings),
             transactions: entries(d.transactions, false), incomes: entries(d.incomes, true),
             uploadedFiles: sources(d.uploadedFiles), uploadedIncomeFiles: sources(d.uploadedIncomeFiles),
             categoryBudgetLimits: limits, emergencyFund: { targetMonths: fund.targetMonths,
@@ -126,7 +128,7 @@ window.Backup = {
             preview.textContent = `Criado em ${new Date(backup.createdAt).toLocaleString('pt-BR')}. `
                 + `${backup.data.transactions.length} despesas e ${backup.data.incomes.length} receitas/regras de recorrência. `
                 + (dates.length ? `Datas cadastradas: ${dates[0]} a ${dates[dates.length - 1]}. ` : 'Sem lançamentos. ')
-                + 'Inclui orçamentos, reserva e moeda. A restauração substituirá os dados atuais; não mescla lançamentos.';
+                + 'Inclui orçamentos, reserva, projeções e moeda. A restauração substituirá os dados atuais; não mescla lançamentos.';
             document.getElementById('restoreConfirm').disabled = false;
         } catch (error) {
             if (this.previewToken === token) preview.textContent = 'Não foi possível ler este backup. ' + error.message;

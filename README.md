@@ -12,6 +12,18 @@ Nas reduções, categorias presentes na base e ausentes no mês selecionado rece
 
 Teste: `node tests/expense-comparison.cjs`.
 
+## Projeções
+
+A aba **Projeções** simula 3, 6 ou 12 meses, começando no mês seguinte ao mês de referência selecionado (ou ao mês atual quando não há referência). As premissas ficam salvas neste navegador e são incluídas no backup. Backups anteriores, sem projeções, continuam aceitos e restauram as premissas padrão.
+
+Saldo inicial e aporte mensal à reserva aparecem na primeira linha; receita e despesa previstas na segunda. Receita/despesa em branco usam a média dos últimos 3 ou 6 meses encerrados até a referência, excluindo o mês atual e meses futuros. Meses sem registros de cada tipo ficam fora da respectiva média; a quantidade disponível é informada. Sem histórico, é necessário preencher manualmente. Zero é um valor manual válido. Receitas recorrentes incluem ajustes e exclusões, sem representar confirmação de recebimento.
+
+Receitas e despesas extras têm tipo, descrição opcional, valor mensal e duração de 1 a 120 meses. Começam no primeiro mês simulado e deixam de afetar o saldo ao terminar a duração. O horizonte limita apenas a exibição. Extras não geram lançamentos reais.
+
+O saldo final sem rendimentos exibe a variação percentual sobre o saldo inicial; com base zero, o percentual não é calculado. O segundo saldo considera uma taxa anual efetiva editável (padrão 5%), convertida em taxa mensal composta. Rendimentos incidem sobre saldo positivo de abertura; o fluxo de caixa ocorre ao fim do mês. Aportes à reserva reduzem o disponível, sem alterar o saldo real da reserva. Não há impostos, taxas, inflação nem juros sobre déficits. As premissas monetárias são armazenadas em BRL e convertidas na exibição BRL/USD.
+
+Teste: `node tests/projections.cjs`.
+
 ## Backup e restauração
 
 Em **Configurações → Backup e restauração**, use **Baixar backup atual** para salvar um JSON com todos os lançamentos, regras e ajustes de receitas recorrentes, orçamentos, reserva e preferências de moeda/câmbio. O backup independe do mês e dos filtros da tela.
