@@ -404,6 +404,7 @@ window.HealthTab = {
                             label: `Saldo Líquido (${curr})`,
                             data: netData,
                             type: 'line',
+                            order: -1,
                             borderColor: '#38bdf8',
                             backgroundColor: 'rgba(56, 189, 248, 0.2)',
                             tension: 0.3,

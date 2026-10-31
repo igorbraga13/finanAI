@@ -40,6 +40,7 @@ window.ExpensesTab = {
         this.applyFilters();
         this.renderKPICards();
         this.renderBudgetSection();
+        if (window.ExpenseComparison) window.ExpenseComparison.render();
         this.renderCharts();
     },
 

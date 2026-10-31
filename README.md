@@ -2,7 +2,37 @@
 
 Aplicação modular de finanças pessoais e controle de investimentos com suporte a moedas BRL/USD, leitura inteligente de extratos via IA, sistema de receitas recorrentes inteligentes e diagnóstico consultivo integrado.
 
-## Despesas manuais
+## Categorias com maiores aumentos e reduções
+
+Na aba **Despesas**, abaixo de **Gastos por Categoria (Mês Selecionado)**, o painel único oferece três botões: **Mês anterior**, **3 meses** e **6 meses**. O botão ativo compara os gastos do mês selecionado com o mês anterior ou com a média mensal do respectivo período anterior. Apenas um período é exibido por vez, mantendo a página compacta. O mês selecionado não entra na média. O primeiro painel mostra até 3 categorias com maior aumento em dinheiro. Logo abaixo, um painel equivalente mostra até 3 categorias com maior redução em dinheiro. Cada painel tem seus próprios botões de período e mostra valor atual, base e variação percentual na moeda de exibição.
+
+Meses sem despesas registradas são excluídos da média e identificados como ausentes; a interface mostra quantos meses compõem a base disponível. Dentro de um mês com registros, uma categoria ausente conta como zero. Base zero aparece como **Sem gasto na base**, sem porcentagem. O mês atual é identificado como em andamento e comparado aos meses anteriores inteiros. O painel usa todas as despesas do mês, sem os filtros da tabela, e não consegue garantir que os extratos de um mês estejam completos.
+
+Nas reduções, categorias presentes na base e ausentes no mês selecionado recebem o aviso **Sem gasto registrado**. Um mês selecionado totalmente sem despesas não gera reduções automáticas. Menos registros não garantem economia efetiva, especialmente com extratos incompletos.
+
+Teste: `node tests/expense-comparison.cjs`.
+
+## Backup e restauração
+
+Em **Configurações → Backup e restauração**, use **Baixar backup atual** para salvar um JSON com todos os lançamentos, regras e ajustes de receitas recorrentes, orçamentos, reserva e preferências de moeda/câmbio. O backup independe do mês e dos filtros da tela.
+
+O arquivo não tem senha e contém dados financeiros pessoais. Chaves de API e conteúdo bruto dos extratos ficam de fora; os nomes das fontes são preservados. O arquivo pode ser levado para outro navegador ou computador. Ele não sincroniza dispositivos automaticamente.
+
+Para restaurar, selecione o JSON nessa mesma janela, confira a prévia e confirme **Substituir dados pelo backup**. A restauração substitui os dados financeiros e não mescla lançamentos. Baixe uma cópia atual antes. As chaves de API existentes no navegador não são alteradas. Somente o formato de backup do FinanAI, versão 1, é aceito (até 25 MB); exportações de lançamentos de uma aba não são backups completos.
+
+## Relatório PDF
+
+O botão **Relatório PDF** no topo permite baixar diretamente um documento, sem abrir a janela de impressão. Escolha o mês ativo, um intervalo ou todo o histórico; marque todas as abas ou somente as desejadas. Também é possível incluir os lançamentos detalhados, gráficos por categoria, orçamentos e reserva, em BRL ou USD.
+
+O relatório usa um layout de impressão com tabelas paginadas, sem importação, edição, chaves ou diagnósticos de IA. Receitas recorrentes são expandidas no período, com ajustes e exclusões; em todo o histórico, até hoje ou a última data cadastrada, o que for posterior. Dias 29–31 são limitados ao último dia do mês quando necessário. As ocorrências previstas não comprovam recebimento.
+
+Saúde Financeira apresenta o balanço e a taxa de poupança do período, além de totais mensais. Os cálculos usam receitas e despesas mesmo se uma dessas abas não for incluída. A reserva é identificada como posição informada atual; sem custo personalizado, sua base é a despesa de todo o último mês do intervalo, ou R$ 2.500 na ausência de despesas. Os orçamentos usam os tetos atuais para cada mês, sem ratear meses parciais.
+
+A geração do PDF acontece localmente e não usa IA nem envia dados a um serviço. A biblioteca **pdf-lib 1.17.1** está incluída em `vendor/pdf-lib/`, com sua licença MIT, sem download adicional para gerar relatórios. A fonte do documento suporta português e caracteres ocidentais; caracteres fora desse conjunto são representados por `?`.
+
+Teste de backup e relatório com dados fictícios: `node tests/backup-report.cjs`.
+
+## Lançamentos manuais de despesas
 
 O aplicativo não cria receitas de demonstração automaticamente. Ao abrir uma versão atualizada, os exemplos antigos de salário e rendimentos são removidos se ainda estiverem intactos. Exemplos editados, receitas cadastradas manualmente e receitas importadas são preservados.
 

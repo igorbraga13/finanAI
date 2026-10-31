@@ -51,7 +51,7 @@
 
     <!-- Top Navigation Bar Principal -->
     <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-3 flex flex-wrap gap-3 items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 p-2 rounded-xl text-emerald-400 border border-emerald-500/30 shadow-lg">
                     <i data-lucide="wallet" class="w-6 h-6"></i>
@@ -63,7 +63,7 @@
             </div>
 
             <!-- Controles Globais do Topo -->
-            <div class="flex items-center gap-2 sm:gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <!-- Seletor de Mês de Referência -->
                 <div class="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700 text-xs shadow-inner">
                     <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i>
@@ -89,6 +89,7 @@
                     <span class="hidden sm:inline">Teto de Gastos</span>
                 </button>
 
+                <button type="button" onclick="Report.open()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs" title="Baixar relatório financeiro">Relatório PDF</button>
                 <!-- Botão Configurações -->
                 <button onclick="Utils.toggleModal('configModal')" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition relative" title="Configurações e Chave de API">
                     <i data-lucide="settings" class="w-5 h-5"></i>
@@ -412,6 +413,38 @@
                     <div class="relative flex-1 min-h-[280px] max-h-[360px] flex items-center justify-center">
                         <canvas id="categoryChart"></canvas>
                     </div>
+                </div>
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-3 space-y-4" aria-labelledby="categoryIncreaseTitle">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 id="categoryIncreaseTitle" class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-amber-400"></i>
+                            Top 3 categorias que mais aumentaram
+                        </h3>
+                        <div role="group" aria-label="Período anterior para comparação" class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-xs font-medium self-start sm:self-auto">
+                            <button type="button" id="categoryIncreasePeriod1" aria-pressed="true" onclick="ExpenseComparison.setPeriod(1)" class="px-3 py-1.5 rounded-md bg-emerald-600 text-white">Mês anterior</button>
+                            <button type="button" id="categoryIncreasePeriod3" aria-pressed="false" onclick="ExpenseComparison.setPeriod(3)" class="px-3 py-1.5 rounded-md text-slate-400">3 meses</button>
+                            <button type="button" id="categoryIncreasePeriod6" aria-pressed="false" onclick="ExpenseComparison.setPeriod(6)" class="px-3 py-1.5 rounded-md text-slate-400">6 meses</button>
+                        </div>
+                    </div>
+                    <p id="categoryIncreaseSummary" class="text-xs text-slate-400" aria-live="polite"></p>
+                    <div id="categoryIncreaseCards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start"></div>
+                    <p id="categoryIncreaseNotice" class="text-xs text-slate-400 leading-relaxed"></p>
+                </div>
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 lg:col-span-3 space-y-4" aria-labelledby="categoryReductionTitle">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 id="categoryReductionTitle" class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="trending-down" class="w-4 h-4 text-emerald-400"></i>
+                            Top 3 categorias que mais reduziram
+                        </h3>
+                        <div role="group" aria-label="Período anterior para comparação" class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex text-xs font-medium self-start sm:self-auto">
+                            <button type="button" id="categoryReductionPeriod1" aria-pressed="true" onclick="ExpenseComparison.setPeriod(1, 'reduction')" class="px-3 py-1.5 rounded-md bg-emerald-600 text-white">Mês anterior</button>
+                            <button type="button" id="categoryReductionPeriod3" aria-pressed="false" onclick="ExpenseComparison.setPeriod(3, 'reduction')" class="px-3 py-1.5 rounded-md text-slate-400">3 meses</button>
+                            <button type="button" id="categoryReductionPeriod6" aria-pressed="false" onclick="ExpenseComparison.setPeriod(6, 'reduction')" class="px-3 py-1.5 rounded-md text-slate-400">6 meses</button>
+                        </div>
+                    </div>
+                    <p id="categoryReductionSummary" class="text-xs text-slate-400" aria-live="polite"></p>
+                    <div id="categoryReductionCards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start"></div>
+                    <p id="categoryReductionNotice" class="text-xs text-slate-400 leading-relaxed"></p>
                 </div>
             </section>
 
@@ -1248,6 +1281,9 @@ gpt-5.4-mini</textarea>
                     </button>
                 </div>
 
+                <div class="border-t border-slate-700 pt-3">
+                    <button type="button" onclick="Utils.toggleModal('configModal'); Utils.toggleModal('backupModal')" class="w-full px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm text-slate-100">Backup e restauração</button>
+                </div>
                 <!-- Painel de Feedback do Teste da Chave -->
                 <div id="apiKeyTestFeedback" class="hidden"></div>
             </div>
@@ -1401,6 +1437,61 @@ gpt-5.4-mini</textarea>
         </div>
     </div>
 
+    <div id="backupModal" role="dialog" aria-modal="true" aria-labelledby="backupTitle" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 id="backupTitle" class="font-semibold text-slate-100">Backup e restauração</h3>
+                <button type="button" onclick="Utils.toggleModal('backupModal')" aria-label="Fechar backup" class="text-slate-300">Fechar</button>
+            </div>
+            <p class="text-sm text-slate-300">Guarde uma cópia de todas as despesas, receitas, recorrências, orçamentos, reserva e preferências de moeda.</p>
+            <p class="text-xs text-slate-400">O arquivo contém dados financeiros pessoais, sem senha. Não inclui chaves de API nem textos brutos dos extratos. Os nomes dos arquivos de origem são preservados.</p>
+            <button type="button" onclick="Backup.download()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Baixar backup atual</button>
+            <div class="border-t border-slate-700 pt-4 space-y-3">
+                <label for="backupFile" class="block text-sm text-slate-200">Restaurar um backup do FinanAI</label>
+                <input id="backupFile" type="file" accept=".json,application/json" onchange="Backup.preview(this.files[0])" class="block w-full text-xs text-slate-300">
+                <p id="restorePreview" role="status" class="text-xs text-slate-300 leading-relaxed"></p>
+                <p class="text-xs text-amber-300">A restauração substitui os dados atuais. Baixe uma cópia antes de continuar. Suas chaves de API não serão alteradas.</p>
+                <button id="restoreConfirm" type="button" disabled onclick="Backup.confirmRestore()" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-40 disabled:cursor-not-allowed">Substituir dados pelo backup</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportModal" role="dialog" aria-modal="true" aria-labelledby="reportTitle" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <form onsubmit="Report.download(event)" class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto text-sm text-slate-200">
+            <div class="flex justify-between items-center">
+                <h3 id="reportTitle" class="font-semibold">Relatório financeiro em PDF</h3>
+                <button type="button" onclick="Utils.toggleModal('reportModal')" aria-label="Fechar relatório">Fechar</button>
+            </div>
+            <p class="text-xs text-slate-400">Download direto, gerado neste navegador. Inclui apenas o conteúdo financeiro escolhido, sem botões ou controles de importação.</p>
+            <label for="reportPeriod" class="block">Período</label>
+            <select id="reportPeriod" onchange="Report.updatePeriod()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2">
+                <option value="selected">Mês selecionado no aplicativo</option>
+                <option value="custom">Intervalo de datas</option>
+                <option value="all">Todo o histórico (recorrências até hoje ou última data cadastrada)</option>
+            </select>
+            <div id="reportDates" class="grid grid-cols-2 gap-3 hidden">
+                <label>De <input id="reportFrom" type="date" class="block w-full bg-slate-900 rounded-lg p-2"></label>
+                <label>Até <input id="reportTo" type="date" class="block w-full bg-slate-900 rounded-lg p-2"></label>
+            </div>
+            <fieldset class="space-y-2">
+                <legend class="font-medium mb-2">Abas (todas selecionadas inicialmente)</legend>
+                <label class="block"><input id="report_expenses" type="checkbox" checked> Despesas</label>
+                <label class="block"><input id="report_incomes" type="checkbox" checked> Receitas</label>
+                <label class="block"><input id="report_health" type="checkbox" checked> Saúde financeira</label>
+            </fieldset>
+            <fieldset class="space-y-2 border-t border-slate-700 pt-3">
+                <legend class="font-medium">Conteúdo adicional</legend>
+                <label class="block"><input id="reportDetails" type="checkbox"> Lista detalhada de lançamentos</label>
+                <label class="block"><input id="reportCharts" type="checkbox" checked> Gráficos por categoria</label>
+                <label class="block"><input id="reportBudgets" type="checkbox" checked> Orçamentos (aba Despesas)</label>
+                <label class="block"><input id="reportReserve" type="checkbox" checked> Reserva atual (aba Saúde Financeira)</label>
+            </fieldset>
+            <label for="reportCurrency" class="block">Moeda do relatório</label>
+            <select id="reportCurrency" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2"><option value="BRL">Real (BRL)</option><option value="USD">Dólar (USD)</option></select>
+            <button id="reportDownload" type="submit" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40">Baixar PDF</button>
+        </form>
+    </div>
+
     <!-- Inclusão dos Scripts Modulares -->
     <script src="js/state.js"></script>
     <script src="js/utils.js"></script>
@@ -1408,8 +1499,12 @@ gpt-5.4-mini</textarea>
     <script src="js/ai-provider.js"></script>
     <script src="js/statement-import.js"></script>
     <script src="js/tabs/expenses.js"></script>
+    <script src="js/expense-comparison.js"></script>
     <script src="js/tabs/incomes.js"></script>
     <script src="js/tabs/health.js"></script>
+    <script src="vendor/pdf-lib/pdf-lib-1.17.1.min.js"></script>
+    <script src="js/backup.js"></script>
+    <script src="js/report.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
